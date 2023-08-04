@@ -1,0 +1,74 @@
+﻿@page "/Manger1"
+
+@using DataAccess
+
+@using BlazorApp3.Models
+
+@inject IMySQLDataAccess _data
+@inject IConfiguration _config
+
+<h3 class="text-center">Regional Manger Page</h3>
+
+
+  <section id="avail-appt-section">
+    
+        @if (loanApplications == null)
+        {
+            <p><em>Loading ...</em></p>
+        }
+        else
+        {
+            <table class="table table-striped">
+                <thead style="background-color:#141e5e; color:white;">
+                    <tr>
+                        <th>FullName</th>
+                        <th>Father Name</th>
+                        <th>Aadhar No.</th>
+                        <th>Loan Amount</th>
+                        <th>Phone No</th>
+                        <th>Address</th>
+                        <th>Approve</th>
+                        <th>Reject</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in loanApplications)
+                    {
+                        <tr>
+                            <td>@a.FullName</td>
+                            <td>@a.FatherName</td>
+                            <td>@a.AadharNo</td>
+                            <td>@a.LoanAmount</td>
+                            <td>@a.PhoneNo</td>
+                            <td>@a.Address</td>
+                            <td>
+                                 <button type="submit" class="btn alert-primary">Approve</button>
+                            </td>
+                            <td>
+                                 <button type="submit" class="btn alert-primary">Reject</button>
+                            </td>
+                        </tr>
+
+                    }
+                </tbody>
+            </table>
+          
+        }
+  </section>
+
+
+
+
+@code {
+
+	List<LoanApplication> loanApplications;
+
+    protected override async Task OnInitializedAsync()
+    {
+        string sql = "select * from application";
+        loanApplications = await _data.LoadData<LoanApplication, dynamic>(sql, new { },
+        _config.GetConnectionString("MySQLConnection"));
+    }
+
+
+}
