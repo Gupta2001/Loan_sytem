@@ -224,7 +224,7 @@
 
                 using (SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587))
                 {
-                    smtp.Credentials = new System.Net.NetworkCredential("shivesh0333@gmail.com", "ekybfoydkzpjxkob");
+                    smtp.Credentials = new System.Net.NetworkCredential("shivesh0333@gmail.com", "");
                     smtp.EnableSsl = true;
                     smtp.Send(mail);
                     message = "mail sent";
