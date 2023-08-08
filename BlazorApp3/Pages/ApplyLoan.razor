@@ -1,7 +1,7 @@
 ﻿@page "/ApplyLoan"
 
 @using DataAccess
-
+@inject IJSRuntime js
 @using BlazorApp3.Models
 
 @inject IMySQLDataAccess _data
@@ -12,7 +12,9 @@
 <h3 class="text-center">Application for for Loan</h3>
 
 
-<form class="row g-3" Model="@loanApplication" OnValidSubmit="@InsertLoanApplication">
+<EditForm class="row g-3" Model="@loanApplication" OnValidSubmit="@InsertLoanApplication">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
     <div class="col-md-6">
         <label for="inputname" class="form-label">Full Name</label>
         <input type="text" class="form-control"  @bind-value = "loanApplication.FullName" id="fullname">
@@ -32,7 +34,7 @@
 
     <div class="col-md-6">
         <label for="phone" class="form-label">Phone No.</label>
-        <input type="tel" class="form-control" id="phonenumber" @bind-value="loanApplication.PhoneNo" pattern="[0-9]{3}-[0-9]{2}-[0-9]{3}">
+        <input type="tel" class="form-control" id="phonenumber" @bind-value="loanApplication.PhoneNo" >
     </div>
 
     <div class="col-md-6">
@@ -67,21 +69,60 @@
         </div>
     </div>
     <div class="col-12">
-        <button type="submit" class="btn btn-primary">Apply</button>
+        <button type="submit" class="btn btn-primary" @onclick="()=>SuccessEvent()">Apply</button>
     </div>
-</form>
+</EditForm>
 
 
 
 @code {
+    [Inject]
+    private NavigationManager NavigationManager { get; set; }
+    List<LoanId> loanId;
 
+    private void NavigateToOtherPage()
+    {
+        NavigationManager.NavigateTo("/applicationsubmit");
+    }
     private LoanApplication loanApplication = new LoanApplication();
     private async Task InsertLoanApplication()
     {
         LoanApplication a = new LoanApplication
             {
-                FullName = loanApplication.FullName
-            };
+                FullName = loanApplication.FullName,
+                FatherName = loanApplication.FatherName,
+                Email = loanApplication.Email,
+                BranchCode = loanApplication.BranchCode,
+                PhoneNo=loanApplication.PhoneNo,
+                AadharNo=loanApplication.AadharNo,
+                LoanAmount=loanApplication.LoanAmount,
+                Address = loanApplication.Address,
+                City = loanApplication.Address,
+                Pincode = loanApplication.Pincode
+            }; 
+
+        string sql = "insert into loan_sys.Allapplication (Fullname,FatherName,Email,BranchCode,PhoneNo,AadharNo,LoanAmount,Address,City,PinCode) values (@FullName, @FatherName ,@Email, @BranchCode ,@PhoneNo , @AadharNo, @LoanAmount, @Address, @City ,@Pincode);";
+        await _data.SaveData(sql, a, _config.GetConnectionString("MySqlConnection"));
+
+        sql = "select max(Id) as Id from loan_sys.allapplication;";
+        loanId = await _data.LoadData<LoanId, dynamic>(sql, new { },
+        _config.GetConnectionString("MySQLConnection"));
+
+        int check = loanId[0].Id;
+        sql = "insert into loan_sys.app (Id) values (@check)";
+        await _data.SaveData(sql, new {check = check}, _config.GetConnectionString("MySqlConnection"));
+
+        //sql = "insert into application (Fullname,FatherName,Email,BranchCode,PhoneNo,AadharNo,LoanAmount,Address,City,PinCode) values (@FullName, @FatherName ,@Email, @BranchCode ,@PhoneNo , @AadharNo, @LoanAmount, @Address, @City ,@Pincode);";
+        //await _data.SaveData(sql, a, _config.GetConnectionString("MySqlConnection"));
+
+       
+        a = new LoanApplication();
+        loanApplication = new LoanApplication();
     }
 
+    public void SuccessEvent()
+    {
+        Console.WriteLine(2);
+        js.InvokeAsync<string>("showAlertSuccess");
+    }
 }

@@ -1,0 +1,247 @@
+﻿@page "/Manger2"
+@attribute [Authorize(Roles = "admin, manager2")]
+@using DataAccess
+@using System.Net.Mail;
+@inject IJSRuntime js
+
+@using BlazorApp3.Models
+
+@inject IMySQLDataAccess _data
+@inject IConfiguration _config
+
+<h3 class="text-center">Head Manger Page</h3>
+
+
+<section id="avail-appt-section">
+
+    @if (loanApplications == null)
+    {
+        <p><em>Loading ...</em></p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead style="background-color:#141e5e; color:white;">
+                <tr>
+                    <th>Id</th>
+                    <th>FullName</th>
+                    <th>Father Name</th>
+                    <th>Aadhar No.</th>
+                    <th>Loan Amount</th>
+                    <th>Phone No</th>
+                    <th>Address</th>
+                    <th>Approve</th>
+                    <th>Reject</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in loanApplications)
+                {
+                    <tr>
+                        <td>@a.Id</td>
+                        <td>@a.FullName</td>
+                        <td>@a.FatherName</td>
+                        <td>@a.AadharNo</td>
+                        <td>@a.LoanAmount</td>
+                        <td>@a.PhoneNo</td>
+                        <td>@a.Address</td>
+                        <td>
+                            <button type="submit" class="btn btn-success" @onclick="()=>Approve_Loan(a.Id)">Approve</button>
+                        </td>
+                        <td>
+                            <button type="submit" class="btn btn-danger" @onclick="()=>Reject_Loan(a.Id)">Reject</button>
+                        </td>
+                    </tr>
+
+                }
+            </tbody>
+        </table>
+
+    }
+</section>
+
+
+
+
+@code {
+
+    List<LoanApplication> loanApplications;
+    private Firstapprove firstapprove = new Firstapprove();
+    private int check;
+    private string message { get; set; } = "";
+    List<Loancount> loancounts;
+    List<EmailList> emailList;
+    bool deleteErrorMessage = false;
+
+    // error message for db delete exception
+    string dbErrorMessage = "";
+
+    private async Task Approve_Loan(int idd)
+    {
+        string sql = "SELECT Count(*) as Count FROM loan_sys.final_approve WHERE MONTH(DateOfapprove) = MONTH(CURRENT_DATE()) AND YEAR(DateOfapprove) = YEAR(CURRENT_DATE());";
+        loancounts = await _data.LoadData<Loancount, dynamic>(sql, new { },
+        _config.GetConnectionString("MySQLConnection"));
+
+        check = loancounts[0].Count;
+
+
+        if (check < 8)
+        {
+
+            Firstapprove tmp = new Firstapprove
+                {
+                    Id = idd
+                };
+
+            check = idd;
+            sql = "insert into loan_sys.final_approve (Id) values (@Id)";
+            try
+            {
+                await _data.SaveData(sql, new { Id = idd }, _config.GetConnectionString("MySqlConnection"));
+                deleteErrorMessage = false;
+                await OnInitializedAsync();
+            }
+            catch (Exception ex)
+            {
+                deleteErrorMessage = true;
+                dbErrorMessage = ex.ToString();
+            }
+
+            Console.WriteLine(idd);
+            //await _data.SaveData(sql, tmp, _config.GetConnectionString("MySqlConnection"));
+
+            sql = "DELETE FROM firstapprove as a where a.Id=@Id";
+            try
+            {
+                await _data.SaveData(sql, new { Id = idd }, _config.GetConnectionString("MySqlConnection"));
+                deleteErrorMessage = false;
+                await OnInitializedAsync();
+            }
+            catch (Exception ex)
+            {
+                deleteErrorMessage = true;
+                dbErrorMessage = ex.ToString();
+            }
+
+            sql = "select Email from loan_sys.Allapplication where Id=@Id;";
+            emailList = await _data.LoadData<EmailList, dynamic>(sql, new { Id=idd },
+           _config.GetConnectionString("MySQLConnection"));
+             string mail_id = emailList[0].Email;
+             Console.WriteLine("Here is mail id");
+             Console.WriteLine(mail_id);
+             Sendmail(mail_id);
+            
+            tmp = new Firstapprove();
+        }
+        else
+        {
+            SuccessEvent();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        string sql = "select * from application";
+        sql = "select * from loan_sys.Allapplication as a,firstapprove as b where a.Id=b.Id";
+        loanApplications = await _data.LoadData<LoanApplication, dynamic>(sql, new { },
+        _config.GetConnectionString("MySQLConnection"));
+    }
+
+
+    private async Task Reject_Loan(int idd)
+    {
+        Rejected_details rejected_Details;
+
+
+        Rejected_details a = new Rejected_details
+        {
+                Id = idd,
+                Rejected_By="Head Manager"
+        };
+
+
+        string reje = "Head Manager";
+        string sql = "insert into rejectedlist (Id,Rejected_By) values (@Id,@Rejected_By)";
+        Console.WriteLine(idd);
+        try
+        {
+            await _data.SaveData(sql, a, _config.GetConnectionString("MySqlConnection"));
+            deleteErrorMessage = false;
+            await OnInitializedAsync();
+        }
+        catch (Exception ex)
+        {
+            deleteErrorMessage = true;
+            dbErrorMessage = ex.ToString();
+        }
+        a = new Rejected_details();
+
+
+
+        Firstapprove tmp = new Firstapprove
+        {
+            Id=idd
+        };
+
+        sql = "DELETE FROM loan_sys.firstapprove as b where b.Id=@Id";
+
+
+        try
+        {
+            await _data.SaveData(sql,tmp, _config.GetConnectionString("MySqlConnection"));
+            deleteErrorMessage = false;
+            await OnInitializedAsync();
+        }
+        catch (Exception ex)
+        {
+            deleteErrorMessage = true;
+            dbErrorMessage = ex.ToString();
+        }
+        tmp = new Firstapprove();
+        idd = 0;
+        reje = "";
+
+    }
+
+    public void SuccessEvent()
+    {
+        Console.WriteLine(2);
+        js.InvokeAsync<string>("showWarning");
+    }
+
+    private void Sendmail(string send_to)
+    {
+        try
+        {
+            using (MailMessage mail = new MailMessage())
+            {
+                mail.From = new MailAddress("shivesh0333@gmail.com");
+                mail.To.Add(send_to);
+                mail.Subject = "Congrats!,Loan Aprrove";
+                mail.Body = "Your Loan is Approve by Head Manager, Contact Your regional Manager";
+                mail.IsBodyHtml = true;
+
+
+                using (SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587))
+                {
+                    smtp.Credentials = new System.Net.NetworkCredential("shivesh0333@gmail.com", "ekybfoydkzpjxkob");
+                    smtp.EnableSsl = true;
+                    smtp.Send(mail);
+                    message = "mail sent";
+                }
+
+                Console.WriteLine("mail sent");
+
+
+            }
+
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+            Console.WriteLine(message);
+        }
+    }
+
+
+}

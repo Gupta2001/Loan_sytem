@@ -6,6 +6,8 @@ namespace BlazorApp3.Models
 	public class LoanApplication
 	{
 		public string FullName { get; set; }
+
+		public int Id { get; set; }	
 		public string FatherName { get; set; } 
 		public string Email { get; set; }
         public string BranchCode { get; set; }

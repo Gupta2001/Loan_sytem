@@ -1,7 +1,7 @@
 ﻿@page "/Manger1"
-
+@attribute [Authorize(Roles = "admin, manager1")]
 @using DataAccess
-
+@inject IJSRuntime js
 @using BlazorApp3.Models
 
 @inject IMySQLDataAccess _data
@@ -21,6 +21,7 @@
             <table class="table table-striped">
                 <thead style="background-color:#141e5e; color:white;">
                     <tr>
+                        <th>Id</th>
                         <th>FullName</th>
                         <th>Father Name</th>
                         <th>Aadhar No.</th>
@@ -35,6 +36,7 @@
                     @foreach (var a in loanApplications)
                     {
                         <tr>
+                            <td>@a.Id</td>
                             <td>@a.FullName</td>
                             <td>@a.FatherName</td>
                             <td>@a.AadharNo</td>
@@ -42,10 +44,10 @@
                             <td>@a.PhoneNo</td>
                             <td>@a.Address</td>
                             <td>
-                                 <button type="submit" class="btn alert-primary">Approve</button>
+                            <button type="submit" class="btn btn-success" @onclick="()=> {Approve_Loan(a.Id); SuccessEvent();}">Approve</button>
                             </td>
                             <td>
-                                 <button type="submit" class="btn alert-primary">Reject</button>
+                            <button type="submit" class="btn btn-danger" @onclick="()=>Reject_Loan(a.Id)">Reject</button>
                             </td>
                         </tr>
 
@@ -59,16 +61,130 @@
 
 
 
+
 @code {
 
-	List<LoanApplication> loanApplications;
+    List<LoanApplication> loanApplications;
+
+    bool is_reject = false;
+    bool is_approv = false;
+    private Firstapprove firstapprove = new Firstapprove();
+    private int check;
+
+    bool deleteErrorMessage = false;
+
+    // error message for db delete exception
+    string dbErrorMessage = "";
+
+    private async Task Approve_Loan(int idd)
+    {
+        Firstapprove tmp = new Firstapprove
+            {
+                Id = idd
+            };
+
+        check = idd;
+        string sql = "insert into loan_sys.firstapprove (Id) values (@Id)";
+        try
+        {
+            await _data.SaveData(sql, tmp, _config.GetConnectionString("MySqlConnection"));
+            deleteErrorMessage = false;
+            await OnInitializedAsync();
+        }
+        catch (Exception ex)
+        {
+            deleteErrorMessage = true;
+            dbErrorMessage = ex.ToString();
+        }
+
+        Console.WriteLine(idd);
+        //await _data.SaveData(sql, tmp, _config.GetConnectionString("MySqlConnection"));
+
+        sql = "DELETE FROM loan_sys.app as a where a.Id=@Id";
+        try
+        {
+            await _data.SaveData(sql, new { Id = idd }, _config.GetConnectionString("MySqlConnection"));
+            deleteErrorMessage = false;
+            await OnInitializedAsync();
+        }
+        catch (Exception ex)
+        {
+            deleteErrorMessage = true;
+            dbErrorMessage = ex.ToString();
+        }
+        tmp = new Firstapprove();
+
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        string sql = "select * from application";
+        string sql = "select * from loan_sys.allapplication as a Right join loan_sys.app as b on a.Id=b.Id;";
         loanApplications = await _data.LoadData<LoanApplication, dynamic>(sql, new { },
         _config.GetConnectionString("MySQLConnection"));
     }
+
+
+
+    private async Task Reject_Loan(int idd)
+    {
+        Rejected_details rejected_Details;
+
+
+        Rejected_details a = new Rejected_details
+            {
+                Id = idd,
+                Rejected_By = "Regional Manager"
+            };
+
+
+        string sql = "insert into loan_sys.rejectedlist (Id) values (@Id)";
+        Console.WriteLine(idd);
+        try
+        {
+            await _data.SaveData(sql, new { Id = idd }, _config.GetConnectionString("MySqlConnection"));
+            deleteErrorMessage = false;
+            await OnInitializedAsync();
+        }
+        catch (Exception ex)
+        {
+            deleteErrorMessage = true;
+            dbErrorMessage = ex.ToString();
+        }
+        a = new Rejected_details();
+
+
+
+        Firstapprove tmp = new Firstapprove
+            {
+                Id = idd
+            };
+
+        sql = "DELETE FROM loan_sys.app as a where a.Id=@Id";
+
+
+        try
+        {
+            await _data.SaveData(sql, tmp, _config.GetConnectionString("MySqlConnection"));
+            deleteErrorMessage = false;
+            await OnInitializedAsync();
+        }
+        catch (Exception ex)
+        {
+            deleteErrorMessage = true;
+            dbErrorMessage = ex.ToString();
+        }
+        tmp = new Firstapprove();
+        idd = 0;
+       
+    }
+
+
+    public void SuccessEvent()
+    {
+        Console.WriteLine(2);
+        js.InvokeAsync<string>("showAlertSuccess");
+    }
+
 
 
 }

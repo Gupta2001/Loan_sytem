@@ -1,13 +1,47 @@
 ﻿@page "/"
 
+@inject IJSRuntime js
+
 
 <PageTitle>Index</PageTitle>
 
-<h1>Hello,Shivesh Welcom to My world!</h1>
-<h3>Welcome to MyBank</h3>
+<div style="background-size: cover; background-repeat: no-repeat; height: 100vh;">
+<div class="container text-center">
+	<div class="content">
+			<h1 style=" font-size: 48px; color: #007bff; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); text-align: center; letter-spacing: 2px; text-transform: uppercase; padding: 20px;margin: 0;color: #f8f9fa;">
+				Welcome to My Bank
+			</h1>
+			<p> <b>
+				My Bank takes immense pride in offering a comprehensive suite of financial services designed to cater to your needs while delivering numerous benefits that make banking with us a truly rewarding experience.
+				One of the primary advantages of banking with us is the competitive interest rates we offer on various accounts and investment products. Whether it's a savings account, fixed deposit, or other investment options, you can rest assured that your hard-earned money will grow faster and help you achieve your financial aspirations.
+			</b>
+			</p>
+			<p> <b>As our esteemed customer, you are at the heart of everything we do. Our team of dedicated experts is committed to understanding your unique financial goals and challenges. With this knowledge, we provide personalized financial solutions that are tailor-made to suit your individual needs. This approach ensures that you receive the best advice and guidance, empowering you to make informed decisions about your finances. </b> </p>
+		 <AuthorizeView>
+			 <NotAuthorized>
+					<a href="/login" class="btn btn-primary btn-lg">Open an Account</a>
+			 </NotAuthorized>
+		 </AuthorizeView>
+	</div>
+</div>
 
-Welcome to your new app.
 
- 
-<SurveyPrompt Title="How is Blazor working for you?" />
 
+
+	
+
+
+</div>
+@code{
+	public void SuccessEvent()
+	{
+		Console.WriteLine(2);
+		js.InvokeAsync<string>("showAlertSuccess");
+	}
+
+	public void WarningEvent()
+	{
+		Console.WriteLine(3);
+		js.InvokeAsync<string>("showWarning");
+	}
+}
